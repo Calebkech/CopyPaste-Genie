@@ -1,5 +1,4 @@
-// Allow text selection and remove event listeners that block copy, paste, and right-click.
-document.body.style.userSelect = 'auto';
+// == CopyPaste Genie Advanced & Persistent Unblocker ==
 
 // List of events to unblock
 const events = [
@@ -9,24 +8,86 @@ const events = [
   'contextmenu',
   'selectstart',
   'mousedown',
-  'mouseup'
+  'mouseup',
+  'keydown'
 ];
 
-// Remove event listeners and inline handlers for the listed events
-events.forEach(event => {
-  document.body.addEventListener(event, e => e.stopPropagation(), true);
-  document.body.addEventListener(event, e => e.stopImmediatePropagation(), true);
+// Helper: Unblock on an element
+function unblockElement(el) {
+  // Remove inline event handlers
+  events.forEach(event => {
+    el[`on${event}`] = null;
+  });
+
+  // Remove CSS user-select restriction
+  el.style.userSelect = 'auto';
+  el.style.webkitUserSelect = 'auto';
+  el.style.MozUserSelect = 'auto';
+  el.style.msUserSelect = 'auto';
+
+  // Remove pointer-events:none if present
+  if (el.style.pointerEvents && el.style.pointerEvents.toLowerCase() === 'none') {
+    el.style.pointerEvents = 'auto';
+  }
+}
+
+// Helper: Remove event listeners by cloning element
+function stripEventListeners(el) {
+  // Only clone if the element is not <html> or <body>
+  if (el.parentNode && el !== document.body && el !== document.documentElement) {
+    const newEl = el.cloneNode(true);
+    el.parentNode.replaceChild(newEl, el);
+    return newEl;
+  }
+  return el;
+}
+
+// Recursively unblock all elements in the DOM
+function recursivelyUnblock(root) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, null);
+  let node = root;
+  while (node) {
+    unblockElement(node);
+    node = walker.nextNode();
+  }
+}
+
+// Attach event listeners to re-allow actions
+function attachGlobalAllowEvents() {
+  events.forEach(event => {
+    document.addEventListener(event, e => {
+      e.stopPropagation();
+      // Optionally, remove preventDefault
+      if (typeof e.cancelable !== 'undefined' && e.cancelable) {
+        e.preventDefault();
+      }
+    }, true);
+  });
+}
+
+// Initial unblock
+function persistentUnblock() {
+  recursivelyUnblock(document.body);
+  attachGlobalAllowEvents();
+}
+
+// Watch for new nodes being added to the DOM
+const observer = new MutationObserver(mutations => {
+  for (const m of mutations) {
+    for (const node of m.addedNodes) {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        recursivelyUnblock(node);
+      }
+    }
+  }
 });
 
-// Remove inline event handlers recursively
-function removeInlineHandlers(elem) {
-  elem.oncopy = null;
-  elem.onpaste = null;
-  elem.oncut = null;
-  elem.oncontextmenu = null;
-  elem.onselectstart = null;
-  elem.onmousedown = null;
-  elem.onmouseup = null;
-  Array.from(elem.children).forEach(removeInlineHandlers);
-}
-removeInlineHandlers(document.body);
+// Start observing
+observer.observe(document.body, { childList: true, subtree: true });
+
+// Run persistent unblocker on page load
+document.addEventListener('DOMContentLoaded', persistentUnblock);
+window.addEventListener('load', persistentUnblock);
+
+// Also run immediately in case DOMContentLoaded has already fired
+persistentUnblock();
