@@ -1,0 +1,26 @@
+body {
+  width: 250px;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  margin: 0;
+  padding: 10px;
+  background: #fafafa;
+}
+
+h1 {
+  font-size: 1.2em;
+  margin-bottom: 15px;
+}
+
+button {
+  padding: 8px 16px;
+  font-size: 1em;
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+#status {
+  color: #1b7e1b;
+  font-size: 0.95em;
+  margin-top: 8px;
+}
